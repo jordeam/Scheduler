@@ -23,7 +23,7 @@ struct scheduler_variables{
  * UTILS			scheduler_16.cpp
  * HARDWARE			hardware.cpp
  * INTERRUPTS		hardware.cpp
- * DEPRECATED		scheduler_16.cpp
+ * DEPRECATED		scheduler_16.cpp / hardware.cpp
  */
 
 class scheduler{
@@ -54,21 +54,21 @@ public:
 	void stack_lift(uint16_t);									//levanta a pilha pra inserir a funcao nela
 	void timer_overflow(void);									//funcao chamada na interrupção do timer
 	uint16_t stack_find_pos(uint16_t, uint16_t *);				//funcao para encontrar o lugar de inserir a funcao na pilha e devolve tambem a diferença de tempo na pilha
-	
+
 //	UTILS
 	void dump(void);											//zera o ponteiro da pilha
 	void stack_refresh(void);									//atualiza o tempo do TOS
-	void timer_block_enable(void);								//aumenta um bloqueio do timer
-	void timer_block_disable(void);								//tira um dos bloqueios do timer
 	uint16_t timer_overflow_time(void);							//retorna o tempo para overflow a partir de agora
 	uint16_t timer_overflow_time(uint16_t);						//retorna o tempo para overflow a partir do argumento
-	
+
 //	HARDWARE
 	void timer_setup(void);										//configura o timer1
 	void timer_start(void);										//descongela o timer
 	void timer_stop(void);										//congela o timer
 	void timer_set(uint16_t);									//carrega o timer com o argumento
 	void timer_set_next(void);									//configura o timer pra proxima execucao
+	void timer_block_enable(void);								//aumenta um bloqueio do timer
+	void timer_block_disable(void);								//tira um dos bloqueios do timer
 	uint16_t time_get(void);									//retorna o valor do timer
 
 //	INTERRUPTS

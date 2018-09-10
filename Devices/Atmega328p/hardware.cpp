@@ -77,6 +77,22 @@ void scheduler::timer_set_next(void){
 	}
 	interrupt_global_block_disable();
 }
+void scheduler::timer_block_enable(void){
+	if(!timer_block_status){
+		timer_block_data = TCCR1B;
+	}
+	timer_stop();
+	timer_block_status++;
+}
+void scheduler::timer_block_disable(void){
+	if(timer_block_status > 1){
+		timer_block_status--;
+	}
+	else if(timer_block_status){
+		TCCR1B = (TCCR1B & ~((1<<CS12)|(1<<CS11)|(1<<CS10))) | (timer_block_data & ((1<<CS12)|(1<<CS11)|(1<<CS10)));
+		timer_block_status--;
+	}
+}
 uint16_t scheduler::time_get(void){
 	uint16_t reading;
 	reading = uint16_t(TCNT1L);
@@ -120,3 +136,17 @@ uint8_t scheduler::interrupt_timer_check(void){
 	return TIFR1 & (1 << TOV1);
 }
 
+// DEPRECATED
+inline void scheduler::atomic_operation_begin(void){
+	if(!atomic_operation_status){
+		temp_sreg = SREG;
+	}
+	SREG &= ~(1 << 7);
+	atomic_operation_status = 1;
+}
+inline void scheduler::atomic_operation_end(void){
+	if(atomic_operation_status){
+		SREG = temp_sreg;
+	}
+	atomic_operation_status = 0;
+}

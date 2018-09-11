@@ -12,9 +12,9 @@
 typedef void (*scheduler_stack_t)(void *);
 
 struct scheduler_variables{
-	scheduler_stack_t stack;									//define o ponteiro para onde vai ser salva a função
-	uint16_t time;												//hora de executar
-	void *arg;													//define o ponteiro onde serão salvos os argumentos
+	scheduler_stack_t stack;									//stack level. Stores the function to call on timer overflow
+	uint16_t time;												//stores the relative time to overflow
+	void *arg;													//pointer to arguments used by function stored on stack
 };
 
 /* Function definiiron file:
@@ -29,63 +29,63 @@ struct scheduler_variables{
 class scheduler{
 public:
 //	VARIABLES
-	uint8_t temp_sreg;											//salva o SREG inteiro
-	uint8_t atomic_operation_status;							//verifica se ja está em operação atomica
-	uint8_t interrupt_block_data;								//salva o SREG.I
-	uint8_t timer_block_data;									//salva o TCCR1B
-	uint8_t power_reduction_enable;								//permite chamar uma função para reduzir o consumo de enrgia
-	uint16_t prescaler;											//valor do prescaler (1024, 512...) (padrão 1024)
-	uint16_t sctr;												//contador do stack
-	uint16_t interrupt_block_status;							//salva se ja está em modo de bloqueio
-	uint16_t timer_block_status;								//salva se o timer ja está bloqueado
-	void (*power_mode_low)(void);								//função chamada quando power_reduction_enable está setado
-	void (*power_mode_normal)(void);							//função chamada quando power_reduction_enable está setado
-	scheduler_variables *data;									//ponteiro pra onde ficam salvos os dados
+	uint8_t temp_status_register;								//DEPRECATED stores status register, to use with atomig operation
+	uint8_t atomic_operation_status;							//DEPRECATED indicates if an atomic operation in running
+	uint8_t interrupt_block_data;								//store global interrupt status (enabled / disabled)
+	uint8_t timer_block_data;									//store timer and prescaler control register
+	uint8_t power_reduction_enable;								//enables power reduction mode
+	uint16_t prescaler;											//prescaler value (1024, 512...) (default 1024)
+	uint16_t sctr;												//stack counter
+	uint16_t interrupt_block_status;							//counts the blocks to global interrupts
+	uint16_t timer_block_status;								//counts the blocks to the timer
+	void (*power_mode_low)(void);								//function to call when power reduction mode is enabled
+	void (*power_mode_normal)(void);							//function to call when power reduction mode is enabled
+	scheduler_variables *data;									//pointer to stack
 
 //	MAIN+
-	void schedule(void (*)(void *), void *, uint16_t);			//programa execucao da funcao
-	scheduler(scheduler_variables *);							//construtor
-	scheduler(scheduler_variables *, uint16_t);					//construtor
-	~scheduler(void);											//destrutor
+	void schedule(void (*)(void *), void *, uint16_t);			//schedule function call
+	scheduler(scheduler_variables *);							//constructor
+	scheduler(scheduler_variables *, uint16_t);					//constructor
+	~scheduler(void);											//destructor
 
 //	MAIN
-	void run(void);												//executa a funcao sem variar o sctr
-	void run(uint16_t);											//executa uma funcao da pilha
-	void stack_lift(uint16_t);									//levanta a pilha pra inserir a funcao nela
-	void timer_overflow(void);									//funcao chamada na interrupção do timer
-	uint16_t stack_find_pos(uint16_t, uint16_t *);				//funcao para encontrar o lugar de inserir a funcao na pilha e devolve tambem a diferença de tempo na pilha
+	void run(void);												//call TOS function
+	void run(uint16_t);											//call function stored on stack
+	void stack_lift(uint16_t);									//lifts stack to insert function
+	void timer_overflow(void);									//function which handles timer overflow
+	uint16_t stack_find_pos(uint16_t, uint16_t *);				//return stack position based on first argument, and moves to pointer target the time difference
 
 //	UTILS
-	void dump(void);											//zera o ponteiro da pilha
-	void stack_refresh(void);									//atualiza o tempo do TOS
-	uint16_t timer_overflow_time(void);							//retorna o tempo para overflow a partir de agora
-	uint16_t timer_overflow_time(uint16_t);						//retorna o tempo para overflow a partir do argumento
+	void dump(void);											//clear the stack
+	void stack_refresh(void);									//refresh TOS time
+	uint16_t timer_overflow_time(void);							//returns time to overflow
+	uint16_t timer_overflow_time(uint16_t);						//returns time to overflow starting from argument value
 
 //	HARDWARE
-	void timer_setup(void);										//configura o timer1
-	void timer_start(void);										//descongela o timer
-	void timer_stop(void);										//congela o timer
-	void timer_set(uint16_t);									//carrega o timer com o argumento
-	void timer_set_next(void);									//configura o timer pra proxima execucao
-	void timer_block_enable(void);								//aumenta um bloqueio do timer
-	void timer_block_disable(void);								//tira um dos bloqueios do timer
-	uint16_t time_get(void);									//retorna o valor do timer
+	void timer_setup(void);										//timer setup
+	void timer_start(void);										//starts the timer
+	void timer_stop(void);										//stops the timer
+	void timer_set_next(void);									//loads the timer with the next stack time
+	void timer_set_overflow(uint16_t);							//set timer to overflow in "argument" units
+	void timer_block_enable(void);								//adds a block to the timer
+	void timer_block_disable(void);								//removes a block to the timer and, if no blocks remain, restore timer state
+	uint16_t time_get(void);									//returns raw timer value
 
 //	INTERRUPTS
-	void interrupt_global_enable(void);							//habilita interrupções globais
-	void interrupt_global_disable(void);						//desabilita interrupções globais
-	void interrupt_global_block_enable(void);					//bloqueia interrupções salvando o estado de SREG.I
-	void interrupt_global_block_disable(void);					//desbloqueia interrupções, e devolve o estado de SREG.I
+	void interrupt_global_enable(void);							//enable global interrupts
+	void interrupt_global_disable(void);						//disable global interrupts
+	void interrupt_global_block_enable(void);					//adds a block to global interrupts
+	void interrupt_global_block_disable(void);					//removes a block to global interrupts and, if no blocks remain, restore global interrupts value
 	void interrupt_timer_clear(void);							//clears the overflow interrupt flag
-	void interrupt_timer_enable(void);							//habilita a interrupção por overflow do timer1
-	void interrupt_timer_disable(void);							//desabilita a interrupção por overflow do timer1
-	uint8_t interrupt_timer_check(void);						//retorna se o timer1 estourou
+	void interrupt_timer_enable(void);							//enables timer overflow interrupt
+	void interrupt_timer_disable(void);							//disables timer overflow interrupt
+	uint8_t interrupt_timer_check(void);						//returns 0 if timer overflow flag is low
 
 //	DEPRECATED
-	void push(void (*)(void *), void *);						//adiciona uma função à pilha
-	void pop(void);												//força a execução da função do topo da pilha e tira ela de lá
-	void atomic_operation_begin(void);							//desabilita interrupção pra azer operação atomica
-	void atomic_operation_end(void);							//habilita interrupção pra fazer operação atomica
+	void push(void (*)(void *), void *);						//push a function into stack
+	void pop(void);												//run the TOS function and remove it from the stack
+	void atomic_operation_begin(void);							//starts an atomic operation. Use interrupt_global_block_enable instead.
+	void atomic_operation_end(void);							//ends an atomic operation. Use interrupt_global_block_disable instead.
 };
 
 #endif

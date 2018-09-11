@@ -21,11 +21,11 @@ void scheduler::schedule(void (*subr)(void *), void *param, uint16_t delay){
 	if(delay){
 		timer_block_enable();
 		if(interrupt_timer_check()){
-			timer_set(0);
+			timer_set_overflow(0);
 		}
 		insertion_pos = stack_find_pos(delay, &time_diff);
 		if(insertion_pos == sctr){
-			timer_set(time_diff);
+			timer_set_overflow(time_diff);
 		}
 		stack_lift(insertion_pos);
 		data[insertion_pos].stack = subr;
@@ -62,7 +62,7 @@ scheduler::scheduler(scheduler_variables *space, uint16_t prsc){
 	prescaler = prsc;
 	sctr = 0;
 	data = space;
-    power_reduction_enable = 0;
+	power_reduction_enable = 0;
 	power_mode_low = nullptr;
 	power_mode_normal = nullptr;
 	SCHEDULER_EVENT_HANDLER = this;

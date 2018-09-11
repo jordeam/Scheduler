@@ -53,11 +53,11 @@ void scheduler::timer_start(void){
 void scheduler::timer_stop(void){
 	TCCR1B &= ~((1<<CS10) | (1<<CS11) | (1<<CS12));
 }
-void scheduler::timer_set(uint16_t value){
+void scheduler::timer_set_next(void){
 	interrupt_global_block_enable();
-	if(value){
-		TCNT1H = uint8_t(timer_overflow_time(value) >> ENTIRE_BYTE);
-		TCNT1L = uint8_t(timer_overflow_time(value) & 0x00FF);
+	if(data[sctr - 1].time){
+		TCNT1H = uint8_t(timer_overflow_time(data[sctr - 1].time) >> ENTIRE_BYTE);
+		TCNT1L = uint8_t(timer_overflow_time(data[sctr - 1].time) & 0x00FF);
 	}
 	else{
 		TCNT1H = 0x00;
@@ -65,11 +65,11 @@ void scheduler::timer_set(uint16_t value){
 	}
 	interrupt_global_block_disable();
 }
-void scheduler::timer_set_next(void){
+void scheduler::timer_set_overflow(uint16_t value){
 	interrupt_global_block_enable();
-	if(data[sctr - 1].time){
-		TCNT1H = uint8_t(timer_overflow_time(data[sctr - 1].time) >> ENTIRE_BYTE);
-		TCNT1L = uint8_t(timer_overflow_time(data[sctr - 1].time) & 0x00FF);
+	if(value){
+		TCNT1H = uint8_t(timer_overflow_time(value) >> ENTIRE_BYTE);
+		TCNT1L = uint8_t(timer_overflow_time(value) & 0x00FF);
 	}
 	else{
 		TCNT1H = 0x00;
@@ -139,14 +139,14 @@ uint8_t scheduler::interrupt_timer_check(void){
 // DEPRECATED
 inline void scheduler::atomic_operation_begin(void){
 	if(!atomic_operation_status){
-		temp_sreg = SREG;
+		temp_status_register = SREG;
 	}
 	SREG &= ~(1 << 7);
 	atomic_operation_status = 1;
 }
 inline void scheduler::atomic_operation_end(void){
 	if(atomic_operation_status){
-		SREG = temp_sreg;
+		SREG = temp_status_register;
 	}
 	atomic_operation_status = 0;
 }

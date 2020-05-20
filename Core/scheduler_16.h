@@ -1,5 +1,5 @@
-#ifndef scheduler_16
-#define scheduler_16
+#ifndef _scheduler_16
+#define _scheduler_16
 
 //Scheduler Header File
 //Version:		1.0
